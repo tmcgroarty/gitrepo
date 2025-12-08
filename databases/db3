@@ -1,0 +1,19 @@
+CREATE TABLE items (
+    id  serial PRIMARY KEY,
+    name    text NOT NULL,
+    category_id integer REFERENCES categories(id),
+    location_id integer REFERENCES locations(id),
+
+    quantity    integer NOT NULL DEFAULT 1,
+    brand   text, 
+    color   text,
+    size    text,
+    material    text,
+    condition   text,
+    purchase_date   date,
+    estimated_value numeric(10,2),
+    notes   text,
+
+    created_at  timestamptz NOT NULL DEFAULT now(),
+    updated_at  timestamptz NOT NULL DEFAULT now()    
+);
