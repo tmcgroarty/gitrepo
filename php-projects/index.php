@@ -2,7 +2,7 @@
 // index.php
 require_once 'config.php';
 
-// Simple query to grab items plus category + location names
+// Query: items + category name + location name
 $sql = "
     SELECT
         i.id,
@@ -10,15 +10,14 @@ $sql = "
         c.name AS category,
         l.name AS location,
         i.quantity,
-        i.color,
-        i.size,
         i.condition,
         i.estimated_value,
-        i.notes
+        i.notes,
+        i.created_at
     FROM items i
     LEFT JOIN categories c ON i.category_id = c.id
     LEFT JOIN locations  l ON i.location_id  = l.id
-    ORDER BY i.name;
+    ORDER BY i.created_at DESC, i.name;
 ";
 
 $stmt = $pdo->query($sql);
@@ -34,7 +33,7 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <body>
 <header>
     <h1>Household Inventory</h1>
-    <p>Viewing items from your PostgreSQL database.</p>
+    <p>Items stored in PostgreSQL (mydb.items).</p>
 </header>
 
 <main>
@@ -52,17 +51,16 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <th>Category</th>
                     <th>Location</th>
                     <th>Qty</th>
-                    <th>Color</th>
-                    <th>Size</th>
                     <th>Condition</th>
                     <th>Value</th>
                     <th>Notes</th>
+                    <th>Created At</th>
                 </tr>
             </thead>
             <tbody>
             <?php if (count($items) === 0): ?>
                 <tr>
-                    <td colspan="10" class="no-data">No items found.</td>
+                    <td colspan="9" class="no-data">No items found.</td>
                 </tr>
             <?php else: ?>
                 <?php foreach ($items as $row): ?>
@@ -72,8 +70,6 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <td><?= htmlspecialchars($row['category'] ?? '') ?></td>
                         <td><?= htmlspecialchars($row['location'] ?? '') ?></td>
                         <td><?= htmlspecialchars($row['quantity']) ?></td>
-                        <td><?= htmlspecialchars($row['color'] ?? '') ?></td>
-                        <td><?= htmlspecialchars($row['size'] ?? '') ?></td>
                         <td><?= htmlspecialchars($row['condition'] ?? '') ?></td>
                         <td>
                             <?php
@@ -83,6 +79,14 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             ?>
                         </td>
                         <td><?= htmlspecialchars($row['notes'] ?? '') ?></td>
+                        <td>
+                            <?php
+                            if (!empty($row['created_at'])) {
+                                $dt = new DateTime($row['created_at']);
+                                echo htmlspecialchars($dt->format('Y-m-d H:i'));
+                            }
+                            ?>
+                        </td>
                     </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
