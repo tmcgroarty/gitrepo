@@ -1,0 +1,86 @@
+/* styles.css */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #f3f4f6;
+    color: #111827;
+}
+
+header {
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 1.5rem 2rem;
+}
+
+header h1 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.6rem;
+}
+
+header p {
+    margin: 0;
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+main {
+    padding: 1.5rem 2rem;
+}
+
+.controls {
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#searchInput {
+    padding: 0.4rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid #d1d5db;
+    min-width: 260px;
+}
+
+.table-container {
+    overflow-x: auto;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.15);
+    padding: 0.5rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+thead {
+    background: #111827;
+    color: #f9fafb;
+}
+
+th, td {
+    padding: 0.5rem 0.6rem;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+tbody tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+tbody tr:hover {
+    background: #e5f3ff;
+}
+
+.no-data {
+    text-align: center;
+    font-style: italic;
+    color: #6b7280;
+}
