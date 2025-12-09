@@ -1,0 +1,37 @@
+check a table header name and data type, you are using psql "view" call information_schema.columns
+
+mydb=# select column_name, data_type from information_schema.columns where table_name = 'categories';
+ column_name | data_type 
+-------------+-----------
+ id          | integer
+ name        | text
+ description | text
+(3 rows)
+
+
+mydb=# update items set category_id = 4 where id = 1;
+
+
+mydb=# select * from items;
+ id |   name   | category_id | location_id | quantity | condition | estimated_value |           notes            |          created_at           
+----+----------+-------------+-------------+----------+-----------+-----------------+----------------------------+-------------------------------
+  1 | hat rack |           4 |           1 |        1 | Good      |           10.00 | hat rack with Madison name | 2025-12-09 02:33:10.551586+00
+  2 | printer  |           3 |           2 |        1 | Good      |           20.00 | no ink                     | 2025-12-09 02:39:39.196158+00
+  3 | lamp     |           4 |           2 |        1 | Good      |           10.00 | white with usb adapter     | 2025-12-09 02:48:03.872962+00
+(3 rows)
+
+mydb=# select * from categories;
+ id |    name     |        description         
+----+-------------+----------------------------
+  1 | clothes     | Clothes and wearable items
+  3 | electronics | All electronic
+  4 | home decor  | All home furnishings
+(3 rows)
+
+mydb=# select * from locations;
+ id |   name   | details 
+----+----------+---------
+  1 | basement | shelf
+  2 | office   | cabinet
+  3 | yard     | shed
+(3 rows)
