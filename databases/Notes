@@ -35,3 +35,11 @@ mydb=# select * from locations;
   2 | office   | cabinet
   3 | yard     | shed
 (3 rows)
+
+\l
+\dt 
+\dv 
+\dt "table name"
+\dt *.*
+\dn - schemas - remember db = file cabinet, scheme is the drawers, folder = table, row or column, data in row or column
+\du - user or roles
