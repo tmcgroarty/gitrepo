@@ -12,12 +12,13 @@ mydb=# select column_name, data_type from information_schema.columns where table
 mydb=# update items set category_id = 4 where id = 1;
 
 
+You are now connected to database "mydb" as user "postgres".
 mydb=# select * from items;
- id |   name   | category_id | location_id | quantity | condition | estimated_value |           notes            |          created_at           
-----+----------+-------------+-------------+----------+-----------+-----------------+----------------------------+-------------------------------
-  1 | hat rack |           4 |           1 |        1 | Good      |           10.00 | hat rack with Madison name | 2025-12-09 02:33:10.551586+00
-  2 | printer  |           3 |           2 |        1 | Good      |           20.00 | no ink                     | 2025-12-09 02:39:39.196158+00
-  3 | lamp     |           4 |           2 |        1 | Good      |           10.00 | white with usb adapter     | 2025-12-09 02:48:03.872962+00
+ id |   name   | category_id | location_id | quantity | condition | estimated_value |           notes            |          created_at           | sold_price 
+----+----------+-------------+-------------+----------+-----------+-----------------+----------------------------+-------------------------------+------------
+  1 | hat rack |           4 |           1 |        1 | Good      |           10.00 | hat rack with Madison name | 2025-12-09 02:33:10.551586+00 |           
+  2 | printer  |           3 |           2 |        1 | Good      |           20.00 | no ink                     | 2025-12-09 02:39:39.196158+00 |           
+  3 | lamp     |           4 |           2 |        1 | Good      |           10.00 | white with usb adapter     | 2025-12-09 02:48:03.872962+00 |           
 (3 rows)
 
 mydb=# select * from categories;
