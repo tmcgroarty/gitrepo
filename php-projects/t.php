@@ -21,13 +21,18 @@ class Dog {
 $dog = new Dog();
 $dog->name = "Billy";
 
-echo $dog->name;
-echo $dog->speak();
-echo $dog->greeting();
+//echo $dog->name;
+//echo $dog->speak();
+//echo $dog->greeting();
 
-print_r($dog->toys);
+//print_r($dog->toys);
 $dog->addtoy("scarf");
 print_r($dog->toys);
 
 $dog->toys[] = "rug";
-print_r($dog->toys);
+//echo $dog->toys[2];
+//var_dump(($dog->toys[2]));
+
+foreach ($dog->toys as $toy) {
+    echo $toy . "<br>";
+}
