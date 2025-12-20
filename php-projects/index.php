@@ -39,7 +39,7 @@ $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 <main>
     <section class="controls">
         <label for="searchInput">Search:</label>
-        <input type="text" id="searchInput" placeholder="Filter by item name, category, or location...">
+        <input type="text" id="searchInput" placeholder="Filter by item, category, or location...">
     </section>
 
     <section class="table-container">
