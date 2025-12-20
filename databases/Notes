@@ -1,5 +1,7 @@
 check a table header name and data type, you are using psql "view" call information_schema.columns
 
+also try \d items
+
 mydb=# select column_name, data_type from information_schema.columns where table_name = 'categories';
  column_name | data_type 
 -------------+-----------

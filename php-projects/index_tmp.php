@@ -2,56 +2,7 @@
 // index.php
 require_once 'config.php';
 
-// -------------------------
-// Handle row update (POST)
-// -------------------------
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update') {
-    // Required
-    $id = (int)($_POST['id'] ?? 0);
-
-    // Editable fields (sanitize/normalize)
-    $name            = trim($_POST['name'] ?? '');
-    $category_id     = ($_POST['category_id'] ?? '') === '' ? null : (int)$_POST['category_id'];
-    $location_id     = ($_POST['location_id'] ?? '') === '' ? null : (int)$_POST['location_id'];
-    $quantity        = (int)($_POST['quantity'] ?? 0);
-    $condition       = trim($_POST['condition'] ?? '');
-    $estimated_value = trim($_POST['estimated_value'] ?? '');
-    $notes           = trim($_POST['notes'] ?? '');
-
-    // Convert empty value to NULL, otherwise numeric
-    $estimated_value = ($estimated_value === '') ? null : (float)$estimated_value;
-
-    // Basic validation (optional but helpful)
-    if ($id > 0 && $name !== '') {
-        $updateSql = "
-            UPDATE items
-            SET
-                name = :name,
-                category_id = :category_id,
-                location_id = :location_id,
-                quantity = :quantity,
-                condition = :condition,
-                estimated_value = :estimated_value,
-                notes = :notes
-            WHERE id = :id
-        ";
-        $stmt = $pdo->prepare($updateSql);
-        $stmt->execute([
-            ':name'            => $name,
-            ':category_id'     => $category_id,
-            ':location_id'     => $location_id,
-            ':quantity'        => $quantity,
-            ':condition'       => $condition,
-            ':estimated_value' => $estimated_value,
-            ':notes'           => $notes,
-            ':id'              => $id,
-        ]);
-    }
-
-    // PRG pattern: avoid resubmitting on refresh
-    header("Location: index.php");
-    exit;
-}
+function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 
 // -------------------------
 // Load dropdown options
@@ -60,7 +11,110 @@ $categories = $pdo->query("SELECT id, name FROM categories ORDER BY name")->fetc
 $locations  = $pdo->query("SELECT id, name FROM locations  ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 // -------------------------
-// Query: items + ids + names
+// Handle actions (POST)
+// -------------------------
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+
+    // Helper: normalize numeric input to NULL/float
+    $numOrNull = function($raw) {
+        $raw = trim((string)$raw);
+        return ($raw === '') ? null : (float)$raw;
+    };
+
+    // -------- ADD --------
+    if ($action === 'add') {
+        $name            = trim($_POST['name'] ?? '');
+        $category_id     = ($_POST['category_id'] ?? '') === '' ? null : (int)$_POST['category_id'];
+        $location_id     = ($_POST['location_id'] ?? '') === '' ? null : (int)$_POST['location_id'];
+        $quantity        = (int)($_POST['quantity'] ?? 0);
+        $condition       = trim($_POST['condition'] ?? '');
+        $estimated_value = $numOrNull($_POST['estimated_value'] ?? '');
+        $sold_price      = $numOrNull($_POST['sold_price'] ?? '');
+        $notes           = trim($_POST['notes'] ?? '');
+
+        if ($name !== '') {
+            $insertSql = "
+                INSERT INTO items (name, category_id, location_id, quantity, condition, estimated_value, sold_price, notes)
+                VALUES (:name, :category_id, :location_id, :quantity, :condition, :estimated_value, :sold_price, :notes)
+            ";
+            $stmt = $pdo->prepare($insertSql);
+            $stmt->execute([
+                ':name'            => $name,
+                ':category_id'     => $category_id,
+                ':location_id'     => $location_id,
+                ':quantity'        => $quantity,
+                ':condition'       => $condition,
+                ':estimated_value' => $estimated_value,
+                ':sold_price'      => $sold_price,
+                ':notes'           => $notes,
+            ]);
+        }
+
+        header("Location: index.php");
+        exit;
+    }
+
+    // ------ UPDATE -------
+    if ($action === 'update') {
+        $id = (int)($_POST['id'] ?? 0);
+
+        $name            = trim($_POST['name'] ?? '');
+        $category_id     = ($_POST['category_id'] ?? '') === '' ? null : (int)$_POST['category_id'];
+        $location_id     = ($_POST['location_id'] ?? '') === '' ? null : (int)$_POST['location_id'];
+        $quantity        = (int)($_POST['quantity'] ?? 0);
+        $condition       = trim($_POST['condition'] ?? '');
+        $estimated_value = $numOrNull($_POST['estimated_value'] ?? '');
+        $sold_price      = $numOrNull($_POST['sold_price'] ?? '');
+        $notes           = trim($_POST['notes'] ?? '');
+
+        if ($id > 0 && $name !== '') {
+            $updateSql = "
+                UPDATE items
+                SET
+                    name = :name,
+                    category_id = :category_id,
+                    location_id = :location_id,
+                    quantity = :quantity,
+                    condition = :condition,
+                    estimated_value = :estimated_value,
+                    sold_price = :sold_price,
+                    notes = :notes
+                WHERE id = :id
+            ";
+            $stmt = $pdo->prepare($updateSql);
+            $stmt->execute([
+                ':name'            => $name,
+                ':category_id'     => $category_id,
+                ':location_id'     => $location_id,
+                ':quantity'        => $quantity,
+                ':condition'       => $condition,
+                ':estimated_value' => $estimated_value,
+                ':sold_price'      => $sold_price,
+                ':notes'           => $notes,
+                ':id'              => $id,
+            ]);
+        }
+
+        header("Location: index.php");
+        exit;
+    }
+
+    // ------ DELETE -------
+    if ($action === 'delete') {
+        $id = (int)($_POST['id'] ?? 0);
+        if ($id > 0) {
+            $del = $pdo->prepare("DELETE FROM items WHERE id = :id");
+            $del->execute([':id' => $id]);
+        }
+
+        header("Location: index.php");
+        exit;
+    }
+}
+
+// -------------------------
+// Query items
 // -------------------------
 $sql = "
     SELECT
@@ -73,6 +127,7 @@ $sql = "
         i.quantity,
         i.condition,
         i.estimated_value,
+        i.sold_price,
         i.notes,
         i.created_at
     FROM items i
@@ -80,10 +135,7 @@ $sql = "
     LEFT JOIN locations  l ON i.location_id  = l.id
     ORDER BY i.created_at DESC, i.name;
 ";
-$stmt = $pdo->query($sql);
-$items = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+$items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -92,14 +144,17 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
     <title>Household Inventory</title>
     <link rel="stylesheet" href="styles.css">
     <style>
-      /* light inline-edit styling (optional) */
-      td input[type="text"], td input[type="number"], td select, td textarea {
-        width: 100%;
-        box-sizing: border-box;
-      }
+      td input[type="text"], td input[type="number"], td select, td textarea { width: 100%; box-sizing: border-box; }
       td textarea { min-height: 40px; }
-      .save-btn { padding: 6px 10px; cursor: pointer; }
       .readonly { background: #f3f3f3; }
+      .btn { padding: 6px 10px; cursor: pointer; }
+      .btn-danger { background: #ffe6e6; border: 1px solid #ffb3b3; }
+      .btn-save { background: #e8f5e9; border: 1px solid #b7e1b9; }
+      .add-form { margin: 16px 0; padding: 12px; border: 1px solid #ddd; border-radius: 8px; }
+      .add-grid { display: grid; grid-template-columns: repeat(4, minmax(160px, 1fr)); gap: 10px; }
+      .add-grid label { display: block; font-size: 0.9rem; margin-bottom: 4px; }
+      .add-grid input, .add-grid select, .add-grid textarea { width: 100%; }
+      .add-actions { margin-top: 10px; }
     </style>
 </head>
 <body>
@@ -109,11 +164,77 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 </header>
 
 <main>
+    <!-- ADD ITEM FORM -->
+    <section class="add-form">
+        <h2>Add Item</h2>
+        <form method="POST">
+            <input type="hidden" name="action" value="add">
+
+            <div class="add-grid">
+                <div>
+                    <label>Item Name</label>
+                    <input type="text" name="name" required>
+                </div>
+
+                <div>
+                    <label>Category</label>
+                    <select name="category_id">
+                        <option value="">— None —</option>
+                        <?php foreach ($categories as $c): ?>
+                            <option value="<?= h($c['id']) ?>"><?= h($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Location</label>
+                    <select name="location_id">
+                        <option value="">— None —</option>
+                        <?php foreach ($locations as $l): ?>
+                            <option value="<?= h($l['id']) ?>"><?= h($l['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div>
+                    <label>Qty</label>
+                    <input type="number" name="quantity" min="0" value="1">
+                </div>
+
+                <div>
+                    <label>Condition</label>
+                    <input type="text" name="condition" placeholder="e.g., Good">
+                </div>
+
+                <div>
+                    <label>Estimated Value</label>
+                    <input type="number" name="estimated_value" step="0.01" min="0" placeholder="e.g., 25.00">
+                </div>
+
+                <div>
+                    <label>Sold Price</label>
+                    <input type="number" name="sold_price" step="0.01" min="0" placeholder="e.g., 20.00">
+                </div>
+
+                <div style="grid-column: span 2;">
+                    <label>Notes</label>
+                    <textarea name="notes" placeholder="Optional notes..."></textarea>
+                </div>
+            </div>
+
+            <div class="add-actions">
+                <button class="btn btn-save" type="submit">Add Item</button>
+            </div>
+        </form>
+    </section>
+
+    <!-- SEARCH -->
     <section class="controls">
         <label for="searchInput">Search:</label>
         <input type="text" id="searchInput" placeholder="Filter by name, category, or location...">
     </section>
 
+    <!-- TABLE -->
     <section class="table-container">
         <table id="itemsTable">
             <thead>
@@ -124,34 +245,31 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                     <th>Location</th>
                     <th>Qty</th>
                     <th>Condition</th>
-                    <th>Value</th>
+                    <th>Est. Value</th>
+                    <th>Sold Price</th>
                     <th>Notes</th>
                     <th>Created At</th>
                     <th>Save</th>
+                    <th>Delete</th>
                 </tr>
             </thead>
             <tbody>
             <?php if (count($items) === 0): ?>
                 <tr>
-                    <td colspan="10" class="no-data">No items found.</td>
+                    <td colspan="12" class="no-data">No items found.</td>
                 </tr>
             <?php else: ?>
                 <?php foreach ($items as $row): ?>
                     <tr>
-                        <!-- Each row is its own form so Save only updates that row -->
+                        <!-- UPDATE FORM -->
                         <form method="POST">
                             <input type="hidden" name="action" value="update">
                             <input type="hidden" name="id" value="<?= h($row['id']) ?>">
 
-                            <!-- Read-only: ID -->
                             <td class="readonly"><?= h($row['id']) ?></td>
 
-                            <!-- Editable: name -->
-                            <td>
-                                <input type="text" name="name" value="<?= h($row['name']) ?>" required>
-                            </td>
+                            <td><input type="text" name="name" value="<?= h($row['name']) ?>" required></td>
 
-                            <!-- Editable: category dropdown -->
                             <td>
                                 <select name="category_id">
                                     <option value="">— None —</option>
@@ -164,7 +282,6 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                                 </select>
                             </td>
 
-                            <!-- Editable: location dropdown -->
                             <td>
                                 <select name="location_id">
                                     <option value="">— None —</option>
@@ -177,29 +294,22 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                                 </select>
                             </td>
 
-                            <!-- Editable: quantity -->
-                            <td>
-                                <input type="number" name="quantity" min="0" value="<?= h($row['quantity']) ?>">
-                            </td>
+                            <td><input type="number" name="quantity" min="0" value="<?= h($row['quantity']) ?>"></td>
 
-                            <!-- Editable: condition -->
-                            <td>
-                                <input type="text" name="condition" value="<?= h($row['condition'] ?? '') ?>" placeholder="e.g., Good">
-                            </td>
+                            <td><input type="text" name="condition" value="<?= h($row['condition'] ?? '') ?>"></td>
 
-                            <!-- Editable: estimated_value -->
                             <td>
                                 <input type="number" name="estimated_value" step="0.01" min="0"
-                                       value="<?= h($row['estimated_value'] ?? '') ?>"
-                                       placeholder="e.g., 25.00">
+                                       value="<?= h($row['estimated_value'] ?? '') ?>">
                             </td>
 
-                            <!-- Editable: notes -->
                             <td>
-                                <textarea name="notes" placeholder="Notes..."><?= h($row['notes'] ?? '') ?></textarea>
+                                <input type="number" name="sold_price" step="0.01" min="0"
+                                       value="<?= h($row['sold_price'] ?? '') ?>">
                             </td>
 
-                            <!-- Read-only: created_at -->
+                            <td><textarea name="notes"><?= h($row['notes'] ?? '') ?></textarea></td>
+
                             <td class="readonly">
                                 <?php
                                 if (!empty($row['created_at'])) {
@@ -209,10 +319,18 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
                                 ?>
                             </td>
 
-                            <td>
-                                <button class="save-btn" type="submit">Save</button>
-                            </td>
+                            <td><button class="btn btn-save" type="submit">Save</button></td>
                         </form>
+
+                        <!-- DELETE FORM -->
+                        <td>
+                            <form method="POST" onsubmit="return confirm('Delete this item? This cannot be undone.');">
+                                <input type="hidden" name="action" value="delete">
+                                <input type="hidden" name="id" value="<?= h($row['id']) ?>">
+                                <button class="btn btn-danger" type="submit">Delete</button>
+                            </form>
+                        </td>
+
                     </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
