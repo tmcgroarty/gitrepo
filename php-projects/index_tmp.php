@@ -8,7 +8,7 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
 // Load dropdown options
 // -------------------------
 $categories = $pdo->query("SELECT id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
-$locations  = $pdo->query("SELECT id, name FROM locations ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+$locations  = $pdo->query("SELECT id, name FROM locations  ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
 // -------------------------
 // Handle actions (POST)
@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     // Helper: normalize numeric input to NULL/float
-    $numOrNull = function($raw) {
+    $numOrNull = function ($raw) {
         $raw = trim((string)$raw);
         return ($raw === '') ? null : (float)$raw;
     };
@@ -29,29 +29,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $location_id     = ($_POST['location_id'] ?? '') === '' ? null : (int)$_POST['location_id'];
         $quantity        = (int)($_POST['quantity'] ?? 0);
         $condition       = trim($_POST['condition'] ?? '');
+
         $estimated_value = $numOrNull($_POST['estimated_value'] ?? '');
         $sold_price      = $numOrNull($_POST['sold_price'] ?? '');
-        $notes           = trim($_POST['notes'] ?? '');
 
-        // Optional: allow adding shipping in the add form later (not required now)
-        // $shipping_service = trim($_POST['shipping_service'] ?? '');
-        // $shipping_cost    = $numOrNull($_POST['shipping_cost'] ?? '');
+        // Cost tracking fields
+        $shipping_service = trim($_POST['shipping_service'] ?? '');
+        $shipping_cost    = $numOrNull($_POST['shipping_cost'] ?? '');
+        $purchase_cost    = $numOrNull($_POST['purchase_cost'] ?? '');
+        $ebay_fees        = $numOrNull($_POST['ebay_fees'] ?? '');
+        $other_costs      = $numOrNull($_POST['other_costs'] ?? '');
+
+        $notes            = trim($_POST['notes'] ?? '');
 
         if ($name !== '') {
             $insertSql = "
-                INSERT INTO items (name, category_id, location_id, quantity, condition, estimated_value, sold_price, notes)
-                VALUES (:name, :category_id, :location_id, :quantity, :condition, :estimated_value, :sold_price, :notes)
+                INSERT INTO items
+                    (name, category_id, location_id, quantity, condition,
+                     estimated_value, sold_price,
+                     shipping_service, shipping_cost,
+                     purchase_cost, ebay_fees, other_costs,
+                     notes)
+                VALUES
+                    (:name, :category_id, :location_id, :quantity, :condition,
+                     :estimated_value, :sold_price,
+                     :shipping_service, :shipping_cost,
+                     :purchase_cost, :ebay_fees, :other_costs,
+                     :notes)
             ";
             $stmt = $pdo->prepare($insertSql);
             $stmt->execute([
-                ':name'            => $name,
-                ':category_id'     => $category_id,
-                ':location_id'     => $location_id,
-                ':quantity'        => $quantity,
-                ':condition'       => $condition,
-                ':estimated_value' => $estimated_value,
-                ':sold_price'      => $sold_price,
-                ':notes'           => $notes,
+                ':name'             => $name,
+                ':category_id'      => $category_id,
+                ':location_id'      => $location_id,
+                ':quantity'         => $quantity,
+                ':condition'        => $condition,
+                ':estimated_value'  => $estimated_value,
+                ':sold_price'       => $sold_price,
+                ':shipping_service' => $shipping_service,
+                ':shipping_cost'    => $shipping_cost,
+                ':purchase_cost'    => $purchase_cost,
+                ':ebay_fees'        => $ebay_fees,
+                ':other_costs'      => $other_costs,
+                ':notes'            => $notes,
             ]);
         }
 
@@ -68,12 +88,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $location_id     = ($_POST['location_id'] ?? '') === '' ? null : (int)$_POST['location_id'];
         $quantity        = (int)($_POST['quantity'] ?? 0);
         $condition       = trim($_POST['condition'] ?? '');
+
         $estimated_value = $numOrNull($_POST['estimated_value'] ?? '');
         $sold_price      = $numOrNull($_POST['sold_price'] ?? '');
-        $notes           = trim($_POST['notes'] ?? '');
 
         $shipping_service = trim($_POST['shipping_service'] ?? '');
         $shipping_cost    = $numOrNull($_POST['shipping_cost'] ?? '');
+        $purchase_cost    = $numOrNull($_POST['purchase_cost'] ?? '');
+        $ebay_fees        = $numOrNull($_POST['ebay_fees'] ?? '');
+        $other_costs      = $numOrNull($_POST['other_costs'] ?? '');
+
+        $notes           = trim($_POST['notes'] ?? '');
 
         if ($id > 0 && $name !== '') {
             $updateSql = "
@@ -88,6 +113,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     sold_price = :sold_price,
                     shipping_service = :shipping_service,
                     shipping_cost = :shipping_cost,
+                    purchase_cost = :purchase_cost,
+                    ebay_fees = :ebay_fees,
+                    other_costs = :other_costs,
                     notes = :notes
                 WHERE id = :id
             ";
@@ -102,6 +130,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':sold_price'       => $sold_price,
                 ':shipping_service' => $shipping_service,
                 ':shipping_cost'    => $shipping_cost,
+                ':purchase_cost'    => $purchase_cost,
+                ':ebay_fees'        => $ebay_fees,
+                ':other_costs'      => $other_costs,
                 ':notes'            => $notes,
                 ':id'               => $id,
             ]);
@@ -141,6 +172,9 @@ SELECT
     i.sold_price,
     i.shipping_service,
     i.shipping_cost,
+    i.purchase_cost,
+    i.ebay_fees,
+    i.other_costs,
     i.notes,
     i.created_at
 FROM items i
@@ -169,6 +203,9 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
       .add-grid input, .add-grid select, .add-grid textarea { width: 100%; }
       .add-actions { margin-top: 10px; }
       nav a { display:inline-block; margin-top:8px; }
+      .neg-profit { background: #fff1f1; }
+      .profit-cell { white-space: nowrap; text-align: right; font-weight: 600; }
+      .money { text-align: right; white-space: nowrap; }
     </style>
 </head>
 <body>
@@ -233,7 +270,32 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                     <input type="number" name="sold_price" step="0.01" min="0" placeholder="e.g., 20.00">
                 </div>
 
-                <div style="grid-column: span 2;">
+                <div>
+                    <label>Shipping Service</label>
+                    <input type="text" name="shipping_service" placeholder="USPS Ground Advantage">
+                </div>
+
+                <div>
+                    <label>Ship Cost</label>
+                    <input type="number" name="shipping_cost" step="0.01" min="0" placeholder="e.g., 6.00">
+                </div>
+
+                <div>
+                    <label>Purchase Cost</label>
+                    <input type="number" name="purchase_cost" step="0.01" min="0" placeholder="0.00">
+                </div>
+
+                <div>
+                    <label>eBay Fees</label>
+                    <input type="number" name="ebay_fees" step="0.01" min="0" placeholder="e.g., 2.20">
+                </div>
+
+                <div>
+                    <label>Other Costs</label>
+                    <input type="number" name="other_costs" step="0.01" min="0" placeholder="e.g., 0.75">
+                </div>
+
+                <div style="grid-column: span 4;">
                     <label>Notes</label>
                     <textarea name="notes" placeholder="Optional notes..."></textarea>
                 </div>
@@ -264,10 +326,14 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                     <th>Condition</th>
                     <th>Est. Value</th>
                     <th>Sold Price</th>
-                    <th>Notes</th>
-                    <th>Created At</th>
                     <th>Shipping Service</th>
                     <th>Ship Cost</th>
+                    <th>Purchase Cost</th>
+                    <th>eBay Fees</th>
+                    <th>Other Costs</th>
+                    <th>Profit</th>
+                    <th>Notes</th>
+                    <th>Created At</th>
                     <th>Save</th>
                     <th>Delete</th>
                 </tr>
@@ -275,12 +341,30 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
             <tbody>
             <?php if (count($items) === 0): ?>
                 <tr>
-                    <td colspan="14" class="no-data">No items found.</td>
+                    <td colspan="18" class="no-data">No items found.</td>
                 </tr>
             <?php else: ?>
                 <?php foreach ($items as $row): ?>
-                    <?php $fid = 'u' . (int)$row['id']; ?>
-                    <tr>
+                    <?php
+                      $fid = 'u' . (int)$row['id'];
+
+                      $sold   = (float)($row['sold_price'] ?? 0);
+                      $buy    = (float)($row['purchase_cost'] ?? 0);
+                      $ship   = (float)($row['shipping_cost'] ?? 0);
+                      $fees   = (float)($row['ebay_fees'] ?? 0);
+                      $other  = (float)($row['other_costs'] ?? 0);
+
+                      $profit = $sold - $buy - $ship - $fees - $other;
+
+                      $showProfit = ($row['sold_price'] !== null)
+                                || ($row['purchase_cost'] !== null)
+                                || ($row['shipping_cost'] !== null)
+                                || ($row['ebay_fees'] !== null)
+                                || ($row['other_costs'] !== null);
+
+                      $profitClass = ($showProfit && $profit < 0) ? 'neg-profit' : '';
+                    ?>
+                    <tr class="<?= h($profitClass) ?>">
                         <td class="readonly"><?= h($row['id']) ?></td>
 
                         <td>
@@ -330,19 +414,6 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                         </td>
 
                         <td>
-                            <textarea name="notes" form="<?= h($fid) ?>"><?= h($row['notes'] ?? '') ?></textarea>
-                        </td>
-
-                        <td class="readonly">
-                            <?php
-                            if (!empty($row['created_at'])) {
-                                $dt = new DateTime($row['created_at']);
-                                echo h($dt->format('Y-m-d H:i'));
-                            }
-                            ?>
-                        </td>
-
-                        <td>
                             <input type="text" name="shipping_service" form="<?= h($fid) ?>"
                                    value="<?= h($row['shipping_service'] ?? '') ?>"
                                    placeholder="USPS Ground Advantage">
@@ -353,6 +424,44 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                                    step="0.01" min="0"
                                    value="<?= h($row['shipping_cost'] ?? '') ?>"
                                    placeholder="e.g. 6.00">
+                        </td>
+
+                        <td>
+                            <input type="number" name="purchase_cost" form="<?= h($fid) ?>"
+                                   step="0.01" min="0"
+                                   value="<?= h($row['purchase_cost'] ?? '') ?>"
+                                   placeholder="0.00">
+                        </td>
+
+                        <td>
+                            <input type="number" name="ebay_fees" form="<?= h($fid) ?>"
+                                   step="0.01" min="0"
+                                   value="<?= h($row['ebay_fees'] ?? '') ?>"
+                                   placeholder="e.g. 2.20">
+                        </td>
+
+                        <td>
+                            <input type="number" name="other_costs" form="<?= h($fid) ?>"
+                                   step="0.01" min="0"
+                                   value="<?= h($row['other_costs'] ?? '') ?>"
+                                   placeholder="e.g. 0.75">
+                        </td>
+
+                        <td class="profit-cell">
+                            <?= $showProfit ? ('$' . number_format($profit, 2)) : '' ?>
+                        </td>
+
+                        <td>
+                            <textarea name="notes" form="<?= h($fid) ?>"><?= h($row['notes'] ?? '') ?></textarea>
+                        </td>
+
+                        <td class="readonly">
+                            <?php
+                            if (!empty($row['created_at'])) {
+                                $dt = new DateTime($row['created_at']);
+                                echo h($dt->format('Y-m-d H:i'));
+                            }
+                            ?>
                         </td>
 
                         <td>
