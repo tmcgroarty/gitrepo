@@ -264,6 +264,9 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                     <th>Created At</th>
                     <th>Save</th>
                     <th>Delete</th>
+                    <th>Shipping Service</th>
+                    <th>Ship Cost</th>
+
                 </tr>
             </thead>
             <tbody>
@@ -306,6 +309,24 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                                     <?php endforeach; ?>
                                 </select>
                             </td>
+                            
+                            <td>
+                                <input type="text"
+                                    name="shipping_service"
+                                    value="<?= h($row['shipping_service'] ?? '') ?>"
+                                    placeholder="USPS Ground Advantage">
+                            </td>
+
+                            <td>
+                                <input type="number"
+                                    name="shipping_cost"
+                                    step="0.01"
+                                    min="0"
+                                    value="<?= h($row['shipping_cost'] ?? '') ?>"
+                                    placeholder="e.g. 6.00">
+                            </td>
+
+
 
                             <td><input type="number" name="quantity" min="0" value="<?= h($row['quantity']) ?>"></td>
 
