@@ -140,6 +140,10 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <nav style="margin-top:10px;">
+    <a href="notes.php">📌 Website Notes / README</a>
+    </nav>
+
     <meta charset="UTF-8">
     <title>Household Inventory</title>
     <link rel="stylesheet" href="styles.css">
