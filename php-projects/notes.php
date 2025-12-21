@@ -1,20 +1,79 @@
 <?php
-// notes.php - simple "README" notes page stored in a local file
-
-$notesFile = __DIR__ . '/website_notes.md'; // saves next to this file
-$message = '';
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $content = $_POST['content'] ?? '';
-    // Save safely
-    file_put_contents($notesFile, $content, LOCK_EX);
-    $message = 'Saved!';
-}
-
-// Load existing content
-$current = file_exists($notesFile) ? file_get_contents($notesFile) : '';
+// notes.php - DB-backed notes (single "README" note)
+require_once 'config.php';
 
 function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
+
+$message = '';
+$error = '';
+
+// Always use the first note row (single-note setup)
+$noteId = null;
+
+// Get the current note row (first row)
+try {
+    $stmt = $pdo->query("SELECT id, title, content, updated_at FROM site_notes ORDER BY id ASC LIMIT 1");
+    $note = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$note) {
+        // If somehow empty, create it
+        $ins = $pdo->prepare("INSERT INTO site_notes (title, content) VALUES (:title, :content) RETURNING id");
+        $ins->execute([':title' => 'Website Notes', ':content' => '']);
+        $noteId = (int)$ins->fetchColumn();
+
+        $stmt = $pdo->prepare("SELECT id, title, content, updated_at FROM site_notes WHERE id = :id");
+        $stmt->execute([':id' => $noteId]);
+        $note = $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    $noteId = (int)$note['id'];
+} catch (Throwable $e) {
+    $error = "Database error while loading notes: " . $e->getMessage();
+    $note = ['title' => 'Website Notes', 'content' => '', 'updated_at' => null];
+}
+
+// Save updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$error) {
+    $title = trim($_POST['title'] ?? 'Website Notes');
+    $content = $_POST['content'] ?? '';
+
+    if ($title === '') $title = 'Website Notes';
+
+    try {
+        // If you did NOT add the trigger, this sets updated_at manually:
+        $sql = "UPDATE site_notes
+                SET title = :title,
+                    content = :content,
+                    updated_at = now()
+                WHERE id = :id";
+        $upd = $pdo->prepare($sql);
+        $upd->execute([
+            ':title' => $title,
+            ':content' => $content,
+            ':id' => $noteId
+        ]);
+
+        $message = "Saved!";
+
+        // Reload fresh content
+        $stmt = $pdo->prepare("SELECT id, title, content, updated_at FROM site_notes WHERE id = :id");
+        $stmt->execute([':id' => $noteId]);
+        $note = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    } catch (Throwable $e) {
+        $error = "Database error while saving notes: " . $e->getMessage();
+    }
+}
+
+$updatedText = '';
+if (!empty($note['updated_at'])) {
+    try {
+        $dt = new DateTime($note['updated_at']);
+        $updatedText = $dt->format('Y-m-d H:i');
+    } catch (Throwable $e) {
+        $updatedText = '';
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -23,28 +82,46 @@ function h($v) { return htmlspecialchars((string)$v, ENT_QUOTES, 'UTF-8'); }
   <title>Website Notes</title>
   <link rel="stylesheet" href="styles.css">
   <style>
-    .wrap { max-width: 900px; margin: 0 auto; padding: 16px; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
+    .topbar { display:flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
     textarea { width: 100%; min-height: 65vh; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
-    .bar { display:flex; gap:12px; align-items:center; margin-bottom:12px; }
-    .msg { color: #0a7a0a; font-weight: 600; }
+    input[type="text"]{ width: 100%; max-width: 520px; }
+    .msg { margin: 12px 0; padding: 10px; border-radius: 6px; }
+    .ok { background: #e8f5e9; border: 1px solid #b7e1b9; }
+    .err { background: #ffe6e6; border: 1px solid #ffb3b3; }
     .btn { padding: 8px 12px; cursor: pointer; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <header>
-      <h1>Website Notes / README</h1>
-      <p>Write anything you want here (setup notes, to-do list, how the site works).</p>
-      <p><a href="index.php">← Back to Inventory</a></p>
-    </header>
+    <div class="topbar">
+      <div>
+        <h1>Website Notes / README</h1>
+        <p><a href="index.php">← Back to Inventory</a></p>
+      </div>
+      <div>
+        <?php if ($updatedText): ?>
+          <small><strong>Last updated:</strong> <?= h($updatedText) ?></small>
+        <?php endif; ?>
+      </div>
+    </div>
+
+    <?php if ($message): ?>
+      <div class="msg ok"><?= h($message) ?></div>
+    <?php endif; ?>
+
+    <?php if ($error): ?>
+      <div class="msg err"><?= h($error) ?></div>
+    <?php endif; ?>
 
     <form method="POST">
-      <div class="bar">
-        <button class="btn" type="submit">Save Notes</button>
-        <?php if ($message): ?><span class="msg"><?= h($message) ?></span><?php endif; ?>
-      </div>
+      <label for="title"><strong>Title</strong></label><br>
+      <input id="title" type="text" name="title" value="<?= h($note['title'] ?? 'Website Notes') ?>"><br><br>
 
-      <textarea name="content" placeholder="Type your notes here..."><?= h($current) ?></textarea>
+      <label for="content"><strong>Notes</strong></label><br>
+      <textarea id="content" name="content" placeholder="Type your notes here..."><?= h($note['content'] ?? '') ?></textarea><br>
+
+      <button class="btn" type="submit">Save Notes</button>
     </form>
   </div>
 </body>
