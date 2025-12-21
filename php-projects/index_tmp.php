@@ -68,19 +68,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $sold_price      = $numOrNull($_POST['sold_price'] ?? '');
         $notes           = trim($_POST['notes'] ?? '');
 
+        $shipping_service = trim($_POST['shipping_service'] ?? '');
+        $shipping_cost    = ($_POST['shipping_cost'] ?? '') === '' ? null : (float)$_POST['shipping_cost'];
+
         if ($id > 0 && $name !== '') {
             $updateSql = "
-                UPDATE items
-                SET
-                    name = :name,
-                    category_id = :category_id,
-                    location_id = :location_id,
-                    quantity = :quantity,
-                    condition = :condition,
-                    estimated_value = :estimated_value,
-                    sold_price = :sold_price,
-                    notes = :notes
-                WHERE id = :id
+            UPDATE items
+            SET
+                name = :name,
+                category_id = :category_id,
+                location_id = :location_id,
+                quantity = :quantity,
+                condition = :condition,
+                estimated_value = :estimated_value,
+                sold_price = :sold_price,
+                shipping_service = :shipping_service,
+                shipping_cost = :shipping_cost,
+                notes = :notes
+            WHERE id = :id            
             ";
             $stmt = $pdo->prepare($updateSql);
             $stmt->execute([
@@ -93,6 +98,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ':sold_price'      => $sold_price,
                 ':notes'           => $notes,
                 ':id'              => $id,
+                ':shipping_service' => $shipping_service,
+                ':shipping_cost'    => $shipping_cost,
             ]);
         }
 
@@ -117,23 +124,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Query items
 // -------------------------
 $sql = "
-    SELECT
-        i.id,
-        i.name,
-        i.category_id,
-        c.name AS category,
-        i.location_id,
-        l.name AS location,
-        i.quantity,
-        i.condition,
-        i.estimated_value,
-        i.sold_price,
-        i.notes,
-        i.created_at
-    FROM items i
-    LEFT JOIN categories c ON i.category_id = c.id
-    LEFT JOIN locations  l ON i.location_id  = l.id
-    ORDER BY i.created_at DESC, i.name;
+SELECT
+    i.id,
+    i.name,
+    i.category_id,
+    c.name AS category,
+    i.location_id,
+    l.name AS location,
+    i.quantity,
+    i.condition,
+    i.estimated_value,
+    i.sold_price,
+    i.shipping_service,
+    i.shipping_cost,
+    i.notes,
+    i.created_at
+FROM items i
+LEFT JOIN categories c ON i.category_id = c.id
+LEFT JOIN locations  l ON i.location_id  = l.id
+ORDER BY i.created_at DESC, i.name;
 ";
 $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
 ?>
