@@ -354,7 +354,8 @@ $items = $pdo->query($sql)->fetchAll(PDO::FETCH_ASSOC);
                       $fees   = (float)($row['ebay_fees'] ?? 0);
                       $other  = (float)($row['other_costs'] ?? 0);
 
-                      $profit = $sold - $buy - $ship - $fees - $other;
+                      // Shipping is paid by buyer, so do NOT subtract it from profit
+                      $profit = $sold - $buy - $fees - $other;
 
                       $showProfit = ($row['sold_price'] !== null)
                                 || ($row['purchase_cost'] !== null)
